@@ -70,24 +70,38 @@ def write_to_csv(project_name):
         csv_file_path = f'../projects/{project_name}/clips.csv'
         print(f"CSV file path: {csv_file_path}")
 
+        # Check if the file exists and is empty
+        file_exists = os.path.isfile(csv_file_path)
+        file_is_empty = not file_exists or os.stat(csv_file_path).st_size == 0
+        
         # Open file in append mode
         with open(csv_file_path, mode='a', newline='') as file:
-            fieldnames = ['speaker', 'start_time', 'end_time', 'dialogue']
-            writer = csv.DictWriter(file, fieldnames=fieldnames)
+            writer = csv.writer(file)
+            mov_file = f'../projects/{project_name}/movie.mov'
 
-            # Check if file is empty; if so, write the header
-            if file.tell() == 0:
-                writer.writeheader()
-                print("CSV header written.")
+            if file_is_empty:
+                # Write header if the file is empty
+                writer.writerow(['speaker', 'start_time', 'end_time', 'dialogue'])
+
+                # Write predefined line only if there is no line after the header
+                writer.writerow(['all', '1.1', '10.1', ''])
+                print("Predefined line written.")
+            
+            # Check if there is already a header and no other lines
+            elif sum(1 for row in open(csv_file_path)) == 1:  # There is only the header
+                with open(csv_file_path, mode='a', newline='') as file:
+                    writer = csv.writer(file)
+                    writer.writerow(['all', '1.1', '10.1', 'Instructions: please record the ambient noise of your environment. Press "Record," remain silent, and hold your phone steady for ten seconds to capture the background sound accurately.', mov_file])
+                    print("Predefined line written.")
 
             # Write each dialogue entry to the CSV
             for dialogue in dialogues:
-                writer.writerow({
-                    'speaker': dialogue['speaker'],
-                    'start_time': start_time,
-                    'end_time': end_time,
-                    'dialogue': dialogue['dialogue']
-                })
+                writer.writerow([
+                    dialogue['speaker'],
+                    start_time,
+                    end_time,
+                    dialogue['dialogue']
+                ])
                 print(f"Added dialogue to CSV: {dialogue}")
 
         return jsonify({'message': 'CSV updated successfully'})
@@ -118,10 +132,18 @@ def save_project():
         save_result = subprocess.run(['python3', 'save.py', project_name], capture_output=True, text=True)
         print(f"save.py script output: {save_result.stdout}")
         if save_result.returncode == 0:
+                    # Run the perms.sh script
+            print("Running perms.sh script.")
+            perms_result = subprocess.run(['bash', 'perms.sh'], capture_output=True, text=True)
+            print(f"perms.sh script output: {perms_result.stdout}")
+            if perms_result.returncode != 0:
+                print(f"Error executing perms.sh script: {perms_result.stderr}")
             return jsonify({'message': 'Save script executed successfully', 'output': save_result.stdout})
         else:
             print(f"Error executing save script: {save_result.stderr}")
             return jsonify({'error': 'Error executing save script', 'output': save_result.stderr}), 500
+        
+        
 
     except Exception as e:
         print(f"Error occurred in save_project: {e}")

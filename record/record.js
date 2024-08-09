@@ -8,6 +8,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const projectContainer = document.getElementById('projectContainer');
     projectName = projectContainer.getAttribute('data-goto-file');
     console.log(projectName);
+
     document.querySelector('.button-list').addEventListener('click', async (event) => {
         if (event.target.tagName === 'BUTTON') {
             const name = event.target.getAttribute('data-name');
@@ -17,15 +18,15 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 });
 
-
 async function load(name) {
     const csvUrl = `../projects/${projectName}/clips.csv`;
     console.log(csvUrl);
+    let forward = true;
     try {
         // Fetch the CSV data
         const response = await fetch(csvUrl);
         const text = await response.text();
-        
+
         // Parse the CSV data
         const lines = text.trim().split('\n');
         
@@ -39,104 +40,125 @@ async function load(name) {
 
         // Set up the video player to disable fullscreen
         const videoPlayer = document.getElementById('videoPlayer');
-        videoPlayer.muted = false;
 
         // Process each line
-        let lineIndex = 1; // Start after the header
+        let lineIndex = 0; // Start after the header
+
         const processNextLine = () => {
+            if(forward){
+                lineIndex++;
+            }
+            else{
+                lineIndex--;
+            };
+
             if (lineIndex >= lines.length) {
-                console.log('No more lines to process.');
-                return;
+                lineIndex = 0;
+            } else if (lineIndex < 0) {
+                lineIndex = lines.length - 1;
             }
 
-            const [speaker, startTime, endTime, textLabel, vidUrl, complete] = lines[lineIndex].split(',');
-            if (speaker !== name) {
-                lineIndex++;
-                processNextLine();
-                return;
-            }
-            if (parseInt(complete) === 1) {
-                lineIndex++;
-                processNextLine();
-                return;
-            }
-            console.log(startTime);
-            document.getElementById('videoContainer').style.display = 'block';
-            document.getElementById('dynamicContent').style.display = 'block';
-            document.getElementById('control').style.display = 'block';
+            // Ensure we have a valid line to process
+            if (lines[lineIndex] && lines[lineIndex].length > 0) {
+                const [speaker, startTime, endTime, textLabel, vidUrl, complete] = lines[lineIndex].split(',');
 
-            // Set up the video player
-            videoPlayer.src = vidUrl;
-
-            // Display the label in the middle third of the screen
-            const middleDiv = document.getElementById('dynamicContent');
-            middleDiv.innerHTML = `<label>${textLabel}</label>`;
-
-            // Add a control div in the bottom third of the screen
-            const controlDiv = document.getElementById('control');
-            controlDiv.innerHTML = `
-                <button id="playButton" style="background-color: darkblue; color: white;">Hear Original</button>
-                <button id="recordButton" style="background-color: red; color: white;">Record</button>
-                <button id="prevButton">← Previous Line</button>
-                <button id="nextButton">Next Line→</button>
-            `;
-
-            document.getElementById('playButton').addEventListener('click', () => {
-                videoPlayer.volume = 1;
-                videoPlayer.play();
-                stopRecording();
-            });
-
-            // Add event listener for "Record" button
-            document.getElementById('recordButton').addEventListener('click', async () => {
-                if (recording) {
-                    alert('Recording is already in progress.');
+                if (speaker !== name && speaker !== 'all') {
+                    processNextLine();
+                    return;
+                }
+                if (parseInt(complete) === 0) {
+                    processNextLine();
                     return;
                 }
 
-                // Start the countdown
-                await startCountdown();
+                // Update the UI with the current line's details
+                document.getElementById('videoContainer').style.display = 'block';
+                document.getElementById('dynamicContent').style.display = 'block';
+                document.getElementById('control').style.display = 'block';
 
-                // Start recording and video playback
-                await startRecording(videoPlayer);
+                // Set up the video player
+                videoPlayer.src = vidUrl;
 
-                videoPlayer.onpause = async () => {
-                    if (videoPlayer.currentTime >= parseFloat(endTime)) {
-                        // Stop recording when the video ends
-                        await stopRecording();
-                        videoPlayer.muted = false; // Unmute the video after recording
-                        saveRecording(name, startTime, endTime);
+                // Display the label in the middle third of the screen
+                const middleDiv = document.getElementById('dynamicContent');
+
+
+                // Add a control div in the bottom third of the screen
+                const controlDiv = document.getElementById('control');
+                controlDiv.innerHTML = `
+                    <button id="playButton"></button>
+                    <button id="recordButton"></button>
+                    <button id="prevButton"></button>
+                    <button id="nextButton"></button>
+                `;
+                
+
+
+                if (speaker === 'all') {
+                    middleDiv.innerHTML = `
+                        <h2 id="top">INSTRUCTIONS</h2>
+                        <p id="oh">Please record the ambient noise of your environment. Press "Record," remain silent, and hold your phone steady for ten seconds to capture the background sound accurately.</p>
+                    `;
+                    document.getElementById('playButton').style.display = 'none';
+                } else {
+                    middleDiv.innerHTML = `
+                        <h2 id="top">Your Line:</h2>
+                        <p id="oh">"${textLabel}"</p>
+                    `;
+                }
+                
+                // Add event listeners for buttons
+                document.getElementById('playButton').addEventListener('click', () => {
+                    recording = false;
+                    console.log(recording);
+                    videoPlayer.play();
+                    playSolo(projectName, name, startTime, endTime, "og/og.wav");
+                });
+
+                document.getElementById('recordButton').addEventListener('click', async () => {
+                    if (recording) {
+                        alert('Recording is already in progress.');
+                        return;
                     }
-                };
 
-                videoPlayer.onended = async () => {
-                    // Stop recording when the video ends
-                    await stopRecording();
-                    videoPlayer.muted = false; // Unmute the video after recording
-                    saveRecording(name, startTime, endTime);
-                };
-            });
+                    // Start the countdown
+                    await startCountdown();
 
-            // Add event listeners for navigation buttons
-            document.getElementById('prevButton').addEventListener('click', () => {
-                lineIndex = Math.max(0, lineIndex - 1);
-                processNextLine();
-            });
+                    // Start recording and video playback
+                    await startRecording(videoPlayer);
 
-            document.getElementById('nextButton').addEventListener('click', () => {
-                lineIndex++;
-                processNextLine();
-            });
+                    videoPlayer.onended = async () => {
+                        if (recording) {
+                            await stopRecording();
+                            saveRecording(name, startTime, endTime);                        
+                        }
+                    };
+                });
 
-            // Display recorded clips for this line
-            displayRecordedClips(name, startTime, endTime);
+                document.getElementById('prevButton').addEventListener('click', () => {
+                    forward = false;
+                    processNextLine();
+                });
+
+                document.getElementById('nextButton').addEventListener('click', () => {
+                    forward = true;
+                    processNextLine();
+                });
+
+                // Display recorded clips for this line
+                displayRecordedClips(name, startTime, endTime);
+            } else {
+                console.log('No more lines to process.');
+            }
         };
 
+        // Start processing lines
         processNextLine();
     } catch (error) {
         console.error('Error loading CSV or setting up page:', error);
     }
 }
+
 
 async function startRecording(videoPlayer) {
     videoPlayer.muted = true;
@@ -159,7 +181,6 @@ async function startRecording(videoPlayer) {
 }
 
 async function stopRecording() {
-    videoPlayer.muted = false;
     return new Promise((resolve) => {
         if (mediaRecorder && recording) {
             mediaRecorder.stop();
@@ -234,7 +255,7 @@ async function displayRecordedClips(name, startTime, endTime) {
                 const fileDiv = document.createElement('div');
                 fileDiv.innerHTML = `
                     <label>${file}</label>
-                    <button class="playSoloButton" data-name="${name}" data-start="${startTime}" data-end="${endTime}" data-file="${file}">Play Solo</button>
+                    <button class="playSoloButton" data-name="${name}" data-start="${startTime}" data-end="${endTime}" data-file="${file}">Play</button>
                     <button class="deleteButton" data-name="${name}" data-start="${startTime}" data-end="${endTime}" data-file="${file}">Delete</button>
                 `;
                 reviewDiv.appendChild(fileDiv);
