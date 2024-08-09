@@ -1,5 +1,6 @@
 <?php
 $gotoFile = isset($_GET['project_name']) ? htmlspecialchars($_GET['project_name']) : '';
+
 function getUniqueNamesFromCsv($filePath) {
     $names = [];
     if (($handle = fopen($filePath, "r")) !== FALSE) {
@@ -10,7 +11,7 @@ function getUniqueNamesFromCsv($filePath) {
         while (($data = fgetcsv($handle)) !== FALSE) {
             if (isset($data[0])) {
                 $name = trim($data[0]); // Assuming the first element is the name and trim to remove extra spaces
-                if (!empty($name) && !in_array($name, $names)) {
+                if (!empty($name) && $name !== 'all' && !in_array($name, $names)) {
                     $names[] = $name;
                 }
             }
@@ -36,6 +37,7 @@ try {
     echo "Error: " . $e->getMessage();
 }
 ?>
+
 
 
 <!DOCTYPE html>
@@ -83,7 +85,7 @@ try {
     </style>
 </head>
 <body>
-    <h1>Record Page</h1>
+    <h1>SELECT YOUR PART</h1>
     <div class="button-list">
         <?php foreach ($names as $name): ?>
             <button data-name="<?php echo htmlspecialchars($name); ?>">
@@ -94,18 +96,24 @@ try {
 
     <!-- Video Container -->
     <div id="videoContainer">
-        <video id="videoPlayer"></video>
+        <video id="videoPlayer" muted></video>
     </div>
 
+
     <!-- Dynamic Content -->
-    <div id="dynamicContent"></div>
+
 
     <!-- Control Buttons -->
     <div id="control">
         <button id="playButton">Play</button>
         <button id="recordButton" style="background-color: red; color: white;">Record</button>
+        <div>
         <button id="prevButton">←</button>
         <button id="nextButton">→</button>
+     </div>
+    </div>
+    <div id="dynamicContent">
+        <h1 id = "top">Your Line: </h1>
     </div>
     <div id="review"></div>
     <div id="projectContainer" 

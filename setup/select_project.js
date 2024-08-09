@@ -9,6 +9,16 @@ document.addEventListener('DOMContentLoaded', function() {
         // Clear existing content
         projectContainer.innerHTML = '';
 
+        // Create the "New Project" button if gotoFile is "setup.php"
+        if (gotoFile === 'setup.php') {
+            const newProjectButton = document.createElement('button');
+            newProjectButton.innerText = 'New Project';
+            newProjectButton.addEventListener('click', () => {
+                window.location.href = 'new.php'; // Redirect to new.php
+            });
+            projectContainer.appendChild(newProjectButton);
+        }
+
         // Create a button for each project directory
         projects.forEach(project => {
             const button = document.createElement('button');
@@ -21,7 +31,6 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function loadProject(projectName) {
-        // Redirect to the GOTO page with project name as a query parameter
         if (gotoFile) {
             const url = `${gotoFile}?project_name=${encodeURIComponent(projectName)}`;
             window.location.href = url;
@@ -29,7 +38,5 @@ document.addEventListener('DOMContentLoaded', function() {
             console.error('GOTO file is not specified.');
         }
     }
-
-    // Render the project buttons
     renderProjectButtons(projects);
 });

@@ -13,14 +13,14 @@ $projects = array_map('basename', $projectDirs);
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Select Project</title>
-<!-- Add your CSS file here -->
+    <link rel="stylesheet" type="text/css" href="../record/style.css">
     <script defer src="select_project.js"></script> <!-- Add your external JS file here -->
 </head>
 <body>
+    <h1>SELECT YOUR PROJECT</h1>
     <div id="projectContainer" 
          data-goto-file="<?php echo htmlspecialchars($gotoFile); ?>" 
          data-projects='<?php echo json_encode($projects); ?>'>
     </div>
 </body>
 </html>
-

@@ -53,8 +53,16 @@ def process_clips(project_dir):
             new_clip.write_videofile(new_clip_path, codec="libx264")
 
             # Create the audio clip
+            # Define the path for the clip directory
+            clip_dir = os.path.join(clip_dir, "og")
+
+            # Check if the directory exists, and create it if it does not
+            if not os.path.exists(clip_dir):
+                os.makedirs(clip_dir)
+
+            # Create the audio clip
+            audio_clip_path = os.path.join(clip_dir, "og.wav")
             audio_clip = new_clip.audio
-            audio_clip_path = os.path.join(clip_dir, f"{start_time}-{end_time}-clip.wav")
             audio_clip.write_audiofile(audio_clip_path)
 
         # Step 5: Add fields to the CSV line
